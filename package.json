@@ -1,0 +1,42 @@
+{
+	"name": "pose-avatar",
+	"version": "0.0.1",
+	"private": true,
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"lint": "prettier --plugin-search-dir . --check . && eslint .",
+		"format": "prettier --plugin-search-dir . --write ."
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-auto": "^2.0.0",
+		"@sveltejs/kit": "^1.5.0",
+		"eslint": "^8.28.0",
+		"eslint-config-prettier": "^8.5.0",
+		"eslint-plugin-svelte": "^2.26.0",
+		"prettier": "^2.8.0",
+		"prettier-plugin-svelte": "^2.8.1",
+		"svelte": "^3.54.0",
+		"svelte-sequential-preprocessor": "^1.0.0",
+		"three": "^0.152.2",
+		"vite": "^4.3.0"
+	},
+	"type": "module",
+	"dependencies": {
+		"@mediapipe/pose": "^0.5.1675469404",
+		"@sveltejs/adapter-static": "^2.0.2",
+		"@tensorflow-models/pose-detection": "^2.1.0",
+		"@tensorflow-models/posenet": "^2.2.2",
+		"@tensorflow/tfjs": "^4.6.0",
+		"@tensorflow/tfjs-backend-cpu": "^4.6.0",
+		"@tensorflow/tfjs-backend-wasm": "^4.6.0",
+		"@tensorflow/tfjs-backend-webgl": "^4.6.0",
+		"@tensorflow/tfjs-backend-webgpu": "^4.6.0",
+		"@tensorflow/tfjs-converter": "^4.6.0",
+		"@tensorflow/tfjs-core": "^4.6.0",
+		"@threlte/core": "^6.0.0-next.7",
+		"@threlte/extras": "^5.0.0-next.13",
+		"svelte-preprocess": "^5.0.3"
+	}
+}
