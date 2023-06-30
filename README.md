@@ -1,17 +1,17 @@
-# create-svelte
+# threlte + posenet
 
-Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte).
+Svelte project to scaffold [`Threlte v6`](https://next.threlte.xyz/) + [`Posenet`](https://www.tensorflow.org/lite/examples/pose_estimation/overview)
 
-## Creating a project
+## Install dependencies
 
 If you're seeing this, you've probably already done this step. Congrats!
 
 ```bash
-# create a new project in the current directory
-npm create svelte@latest
+# with npm
+npm install
 
-# create a new project in my-app
-npm create svelte@latest my-app
+# with yarn
+yarn 
 ```
 
 ## Developing
