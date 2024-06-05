@@ -45,7 +45,7 @@
         }
     })
     $: if($gltf){
-        console.log($gltf.nodes)
+        // console.log($gltf.nodes)
     }
     // $: console.log(keypoints)
   </script>
