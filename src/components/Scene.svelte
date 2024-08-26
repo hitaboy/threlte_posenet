@@ -1,51 +1,105 @@
 <script>
+	
     import { T, useFrame } from '@threlte/core'
     import { useGltf, OrbitControls } from '@threlte/extras'
-    export let keypoints = []
-    const gltf = useGltf('/model.glb')
+    import { Quaternion, Vector3 } from 'three';
+    export let poses = []
+    const gltf = useGltf('/model2.glb')
 
-    const CONFIDENCE = 0.3
+    let skeleton
+    let consoled = false
 
-    const getAngle = (p1, p2, c1, c2, m) => {
-        if(p1['score'] > CONFIDENCE && p2['score'] > CONFIDENCE){
-        return (Math.atan2(p2['position']['y'] - p1['position']['y'], p2['position']['x'] - p1['position']['x']) + c1) * m;
-        }
-        return c2 * m
+    function updateBoneRotation(boneName, s_x, s_y, s_z, e_x, e_y, e_z){
+      const start = new Vector3(s_x * 2 - 1, -(s_y * 2 - 1), s_z);
+      const end = new Vector3(e_x * 2 - 1, -(e_y * 2 - 1), e_z);
+      const direction = new Vector3().subVectors(end, start).normalize();
+      const defaultDirection = new Vector3(0, 1, 0);
+      const quaternion = new Quaternion().setFromUnitVectors(defaultDirection, direction);
+      if(boneName == ''){
+        return quaternion
+      }else{
+        $gltf.nodes[boneName].quaternion.copy(quaternion)
+      }
     }
+
+    function midpoint(p1,p2) {
+      return new Vector3((p1.x + p2.x) / 2,(p1.y + p2.y) / 2,(p1.z + p2.z) / 2)
+    }
+
+    function position(boneName, pos, mul) {
+      $gltf.nodes[boneName].position.x = pos.x*mul
+      $gltf.nodes[boneName].position.y = pos.y*mul
+      $gltf.nodes[boneName].position.z = pos.z*mul
+    }
+
+    let neck
+    let eyes
+    let eyes_neck
+    let leftHand
+    let rightHand
+    let neckQuaternion
+    let headQuaternion
+    let hips
     
-    const normalize = (min, max, val) => {
-        return ((val - min) / (max - min))* Math.PI;
-    }
     useFrame(()=>{
-        if($gltf && keypoints.length){
+        
+        if($gltf && poses.length){
 
-            // $gltf.nodes.mixamorigLeftArm.rotation.y = getAngle(keypoints[7], keypoints[5], 0, 0, -1)
+          updateBoneRotation('mixamorigLeftArm', poses[11].z, poses[11].x*-1, poses[11].y, poses[13].z, poses[13].x*-1, poses[13].y);
+          updateBoneRotation('mixamorigLeftForeArm', poses[13].z, poses[13].x*-1, poses[13].y, poses[15].z, poses[15].x*-1, poses[15].y);
+          updateBoneRotation('mixamorigRightArm', poses[12].z*-1, poses[12].x, poses[12].y, poses[14].z*-1, poses[14].x, poses[14].y);
+          updateBoneRotation('mixamorigRightForeArm', poses[14].z*-1, poses[14].x, poses[14].y, poses[16].z*-1, poses[16].x, poses[16].y);
 
-            // Left arm & elbow
-            $gltf.nodes.mixamorigLeftArm.rotation.y  = getAngle(keypoints[5], keypoints[7], 0, 0, -1)
-            $gltf.nodes.mixamorigLeftForeArm.rotation.x  = getAngle(keypoints[7], keypoints[9], 0, 0, 1)
+          neck = midpoint(poses[11],poses[12])
+          eyes = midpoint(poses[5],poses[2])
+          leftHand = midpoint(poses[17],poses[19])
+          rightHand = midpoint(poses[20],poses[18])
+          eyes_neck = midpoint(eyes,neck)
+          hips = midpoint(poses[24],poses[23])
+          
+          updateBoneRotation('mixamorigNeck', neck.x, neck.y, neck.z*-1, poses[0].x, poses[0].y, poses[0].z*-1);
+          $gltf.nodes['mixamorigHead'].rotation.y = 2*Math.PI+Math.PI*(eyes.x*2)
+          $gltf.nodes['mixamorigHead'].rotation.x = Math.PI-Math.PI/(eyes_neck.y*2)-0.5
+          // $gltf.nodes['mixamorigNeck'].quaternion.copy(neckQuaternion.multiply(headQuaternion))
+          
+          updateBoneRotation('mixamorigSpine', hips.x, hips.y, hips.z, neck.x, neck.y, neck.z);
+          updateBoneRotation('mixamorigSpine1', hips.x, hips.y, hips.z, neck.x/2, neck.y/2, neck.z/2);
+          updateBoneRotation('mixamorigSpine2', hips.x, hips.y, hips.z, neck.x/4, neck.y/4, neck.z/4);
+          // $gltf.nodes['mixamorigSpine'].rotation.y = Math.PI/(hips.x*10000)
+          
+          // updateBoneRotation('mixamorigLeftUpLeg', 0, -1, 0, 0, 0, 0);
+          updateBoneRotation('mixamorigLeftUpLeg', poses[23].x, poses[23].y, poses[23].z/30, poses[25].x, poses[25].y, poses[25].z/30);
+          updateBoneRotation('mixamorigLeftLeg', poses[25].x*-1, poses[25].y, poses[25].z*-1, poses[27].x*-1, poses[27].y/20, poses[27].z*-1);
+          
+          // position('mixamorigLeftLeg', poses[25], 140)
+          // position('mixamorigSpine', hips, 200)
 
-            
-            //Right arm & elbow
-            $gltf.nodes.mixamorigRightArm.rotation.y = getAngle(keypoints[8], keypoints[6], 0, 0, -1)
-            $gltf.nodes.mixamorigRightForeArm.rotation.x = getAngle(keypoints[10], keypoints[8], 0, 0, -1)
-            /*
-            // Left leg & knee
-            nodes.Ch36.skeleton.bones[55].rotation.z =  getAngle(kp[11], kp[13], (Math.PI/2), Math.PI, -1)
-            //nodes.Ch36.skeleton.bones[56].rotation.z = getAngle(kp[15], kp[13], (Math.PI/2), 0, -1)
+          updateBoneRotation('mixamorigRightUpLeg', poses[24].x, poses[24].y, poses[24].z/30, poses[26].x, poses[26].y, poses[26].z/30);
+          updateBoneRotation('mixamorigRightLeg', poses[26].x*-1, poses[26].y, poses[26].z*-1, poses[28].x*-1, poses[28].y/20, poses[28].z*-1);
+          // updateBoneRotation('mixamorigRightUpLeg', poses[24].z, poses[24].x*-1, poses[24].y, poses[26].z, poses[26].x*-1, poses[26].y);
+          // updateBoneRotation('mixamorigRightLeg', poses[26].z, poses[26].x*-1, poses[26].y, poses[28].z, poses[28].x*-1, poses[28].y);
+          
+          // updateBoneRotation('mixamorigLeftHand', poses[15].x, poses[15].y, poses[15].z, leftHand.x, leftHand.y, leftHand.z);
+          // updateBoneRotation('mixamorigRightHand', poses[16].x, poses[16].y, poses[16].z, rightHand.x, rightHand.y, rightHand.z);
 
-            // Right leg & knee
-            nodes.Ch36.skeleton.bones[60].rotation.z =  getAngle(kp[12], kp[14], (Math.PI/2), Math.PI, -1)
-            //nodes.Ch36.skeleton.bones[61].rotation.z = getAngle(kp[16], kp[14], (Math.PI/2), 0, -1)
+          // $gltf.nodes['mixamorigHead'].position.y = poses[0].y*-20
+          // updateBoneRotation('mixamorigSpine', poses[11].x, 0, poses[11].z, poses[12].x, 0, poses[12].z);
 
-            // Head
-            nodes.Ch36.skeleton.bones[5].rotation.y = getYRotation(kp[1], kp[2], kp[0])
-            nodes.Ch36.skeleton.bones[5].rotation.z = getZRotation(kp[1], kp[2])
-            */
+          if(!consoled){
+            consoled = true
+            console.log($gltf.nodes['mixamorigLeftHand'])
+            console.log(poses)
+            console.log(neck)   
+          } 
         }
     })
     $: if($gltf){
-        // console.log($gltf.nodes)
+        // console.log($gltf)
+        // $gltf.materials.Beta_HighLimbsGeoSG3.wireframe = true
+        // $gltf.materials.Beta_Joints_MAT1.wireframe = true
+        // $gltf.nodes['mixamorigLeftShoulder'].visible = false
+        // $gltf.nodes['mixamorigRightShoulder'].visible = false
+        // $gltf.nodes['Beta_Joints'].visible = false
     }
     // $: console.log(keypoints)
   </script>
@@ -63,5 +117,5 @@
   <T.DirectionalLight position={[3, 10, 7]} />
   
 {#if $gltf}
-  <T is={$gltf.nodes['Scene']} scale={9} position={[0,-9,0]} />
+  <T is={$gltf.nodes['Scene']} scale={9} position={[0,-9,0]} bind:skeleton={skeleton} />
 {/if}
