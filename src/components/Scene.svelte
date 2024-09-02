@@ -3,104 +3,135 @@
     import { T, useFrame } from '@threlte/core'
     import { useGltf, OrbitControls } from '@threlte/extras'
     import { Quaternion, Vector3 } from 'three';
+    import { getMidpoint } from '@lib/utils.js'
+    
     export let poses = []
-    const gltf = useGltf('/model2.glb')
+    export let model
 
+    const gltf = useGltf('/'+model.file)
     let skeleton
     let consoled = false
+    let neckBase
+    let scoreThreshold = 0.5
+    let initialDirections = {}
 
-    function updateBoneRotation(boneName, s_x, s_y, s_z, e_x, e_y, e_z){
+    let prefix = ''
+    if(model.type == 'mixamo'){
+      prefix = prefix+'mixamorig'
+    }
+
+    function updateBoneRotation(boneName, s, e){
+      const direction = new Vector3(
+        e.x - s.x,
+        e.y - s.y,
+        e.z - s.z
+      ).normalize();
+      const defaultDirection = new Vector3(initialDirections[boneName].x,initialDirections[boneName].y,initialDirections[boneName].z);
+      const quaternion = new Quaternion().setFromUnitVectors(defaultDirection, direction);
+      $gltf.nodes[boneName].quaternion.copy(quaternion)
+    }
+
+    function updateBoneRotation2(boneName, s_x, s_y, s_z, e_x, e_y, e_z){
       const start = new Vector3(s_x * 2 - 1, -(s_y * 2 - 1), s_z);
       const end = new Vector3(e_x * 2 - 1, -(e_y * 2 - 1), e_z);
       const direction = new Vector3().subVectors(end, start).normalize();
-      const defaultDirection = new Vector3(0, 1, 0);
+      const defaultDirection = new Vector3(initialDirections[boneName].x,initialDirections[boneName].y,initialDirections[boneName].z);
       const quaternion = new Quaternion().setFromUnitVectors(defaultDirection, direction);
-      if(boneName == ''){
-        return quaternion
-      }else{
-        $gltf.nodes[boneName].quaternion.copy(quaternion)
-      }
+      $gltf.nodes[boneName].quaternion.copy(quaternion)
     }
 
-    function midpoint(p1,p2) {
-      return new Vector3((p1.x + p2.x) / 2,(p1.y + p2.y) / 2,(p1.z + p2.z) / 2)
+    function updateNeck(){
+      // neckBase : LeftShoulder - RightShoulder
+      neckBase = getMidpoint(poses[11],poses[12])
+
+      // Girar amunt i avall
+      let initRotationX = new Vector3(1,0,0)
+      // let quaternionRotationX = new Quaternion().setFromAxisAngle(initRotationX, -Math.PI / 1.6- ( Math.PI * poses[0].y*-2));
+      let quaternionRotationX = new Quaternion().setFromAxisAngle(initRotationX, (Math.PI * poses[0].y*3.1) - 0.3);
+
+      // Girar lateralment
+      let initRotationY = new Vector3(0,1,0)
+      let quaternionRotationY = new Quaternion().setFromAxisAngle(initRotationY, Math.PI * poses[0].x*3.1);
+      
+      // Torçar lateralment
+      let initRotationZ = new Vector3(0,0,1)
+      let quaternionRotationZ = new Quaternion().setFromAxisAngle(initRotationZ, Math.PI * poses[0].x*-1.1 );
+      //  - ( Math.PI * poses[0].z*-1 )
+
+      $gltf.nodes[prefix+'Neck'].quaternion.copy(quaternionRotationX).premultiply(quaternionRotationY).premultiply(quaternionRotationZ)
+      
     }
 
-    function position(boneName, pos, mul) {
-      $gltf.nodes[boneName].position.x = pos.x*mul
-      $gltf.nodes[boneName].position.y = pos.y*mul
-      $gltf.nodes[boneName].position.z = pos.z*mul
+    function updateArms(){
+
+      let leftShoulder = {x: poses[11].z, y: poses[11].x, z: poses[11].y}
+      let leftElbow = {x: poses[13].z, y: poses[13].x, z: poses[13].y}
+      updateBoneRotation(prefix+'LeftArm', leftShoulder, leftElbow);
+
+      let leftElbowToWrist = {x: poses[13].x, y: poses[13].y, z: poses[13].z*-1}
+      let leftWrist = {x: poses[15].x, y: poses[15].y, z: poses[15].z*-1}
+      updateBoneRotation(prefix+'LeftForeArm', leftElbowToWrist, leftWrist);
+      
+      let rightShoulder = {x: poses[12].y, y: poses[12].x*-1, z: poses[12].x}
+      let rightElbow = {x: poses[14].y, y: poses[14].x*-1, z: poses[14].x}
+      updateBoneRotation(prefix+'RightArm', rightShoulder, rightElbow);
+      
     }
 
-    let neck
-    let eyes
-    let eyes_neck
-    let leftHand
-    let rightHand
-    let neckQuaternion
-    let headQuaternion
-    let hips
-    
+    function checkScoreTreshold(poses_indexes){
+      let scoreApproved = true
+      poses_indexes.map(pi=>{
+        if(poses[pi].score<scoreThreshold){
+          scoreApproved = false
+        }
+      })
+      return scoreApproved
+    }
+
+
+
     useFrame(()=>{
-        
         if($gltf && poses.length){
-
-          updateBoneRotation('mixamorigLeftArm', poses[11].z, poses[11].x*-1, poses[11].y, poses[13].z, poses[13].x*-1, poses[13].y);
-          updateBoneRotation('mixamorigLeftForeArm', poses[13].z, poses[13].x*-1, poses[13].y, poses[15].z, poses[15].x*-1, poses[15].y);
-          updateBoneRotation('mixamorigRightArm', poses[12].z*-1, poses[12].x, poses[12].y, poses[14].z*-1, poses[14].x, poses[14].y);
-          updateBoneRotation('mixamorigRightForeArm', poses[14].z*-1, poses[14].x, poses[14].y, poses[16].z*-1, poses[16].x, poses[16].y);
-
-          neck = midpoint(poses[11],poses[12])
-          eyes = midpoint(poses[5],poses[2])
-          leftHand = midpoint(poses[17],poses[19])
-          rightHand = midpoint(poses[20],poses[18])
-          eyes_neck = midpoint(eyes,neck)
-          hips = midpoint(poses[24],poses[23])
-          
-          updateBoneRotation('mixamorigNeck', neck.x, neck.y, neck.z*-1, poses[0].x, poses[0].y, poses[0].z*-1);
-          $gltf.nodes['mixamorigHead'].rotation.y = 2*Math.PI+Math.PI*(eyes.x*2)
-          $gltf.nodes['mixamorigHead'].rotation.x = Math.PI-Math.PI/(eyes_neck.y*2)-0.5
-          // $gltf.nodes['mixamorigNeck'].quaternion.copy(neckQuaternion.multiply(headQuaternion))
-          
-          updateBoneRotation('mixamorigSpine', hips.x, hips.y, hips.z, neck.x, neck.y, neck.z);
-          updateBoneRotation('mixamorigSpine1', hips.x, hips.y, hips.z, neck.x/2, neck.y/2, neck.z/2);
-          updateBoneRotation('mixamorigSpine2', hips.x, hips.y, hips.z, neck.x/4, neck.y/4, neck.z/4);
-          // $gltf.nodes['mixamorigSpine'].rotation.y = Math.PI/(hips.x*10000)
-          
-          // updateBoneRotation('mixamorigLeftUpLeg', 0, -1, 0, 0, 0, 0);
-          updateBoneRotation('mixamorigLeftUpLeg', poses[23].x, poses[23].y, poses[23].z/30, poses[25].x, poses[25].y, poses[25].z/30);
-          updateBoneRotation('mixamorigLeftLeg', poses[25].x*-1, poses[25].y, poses[25].z*-1, poses[27].x*-1, poses[27].y/20, poses[27].z*-1);
-          
-          // position('mixamorigLeftLeg', poses[25], 140)
-          // position('mixamorigSpine', hips, 200)
-
-          updateBoneRotation('mixamorigRightUpLeg', poses[24].x, poses[24].y, poses[24].z/30, poses[26].x, poses[26].y, poses[26].z/30);
-          updateBoneRotation('mixamorigRightLeg', poses[26].x*-1, poses[26].y, poses[26].z*-1, poses[28].x*-1, poses[28].y/20, poses[28].z*-1);
-          // updateBoneRotation('mixamorigRightUpLeg', poses[24].z, poses[24].x*-1, poses[24].y, poses[26].z, poses[26].x*-1, poses[26].y);
-          // updateBoneRotation('mixamorigRightLeg', poses[26].z, poses[26].x*-1, poses[26].y, poses[28].z, poses[28].x*-1, poses[28].y);
-          
-          // updateBoneRotation('mixamorigLeftHand', poses[15].x, poses[15].y, poses[15].z, leftHand.x, leftHand.y, leftHand.z);
-          // updateBoneRotation('mixamorigRightHand', poses[16].x, poses[16].y, poses[16].z, rightHand.x, rightHand.y, rightHand.z);
-
-          // $gltf.nodes['mixamorigHead'].position.y = poses[0].y*-20
-          // updateBoneRotation('mixamorigSpine', poses[11].x, 0, poses[11].z, poses[12].x, 0, poses[12].z);
-
+          if(checkScoreTreshold([11,12,10,9,5,2])){
+            updateNeck();
+          }
+          if(checkScoreTreshold([11,13,15])){
+            updateArms();
+          }
+          // updateBoneRotation2(prefix+'LeftArm', poses[11].z, poses[11].x*-1, poses[11].y, poses[13].z, poses[13].x*-1, poses[13].y);
+          // updateBoneRotation2(prefix+'LeftForeArm', poses[13].z, poses[13].x*-1, poses[13].y, poses[15].z, poses[15].x*-1, poses[15].y);
+          // updateBoneRotation2(prefix+'RightArm', poses[12].z*-1, poses[12].x, poses[12].y, poses[14].z*-1, poses[14].x, poses[14].y);
+          // updateBoneRotation2(prefix+'RightForeArm', poses[14].z*-1, poses[14].x, poses[14].y, poses[16].z*-1, poses[16].x, poses[16].y);
           if(!consoled){
             consoled = true
-            console.log($gltf.nodes['mixamorigLeftHand'])
-            console.log(poses)
-            console.log(neck)   
+            // console.log(initialDirections[prefix+'Neck'], neckDirection)
           } 
         }
     })
     $: if($gltf){
-        // console.log($gltf)
-        // $gltf.materials.Beta_HighLimbsGeoSG3.wireframe = true
-        // $gltf.materials.Beta_Joints_MAT1.wireframe = true
-        // $gltf.nodes['mixamorigLeftShoulder'].visible = false
-        // $gltf.nodes['mixamorigRightShoulder'].visible = false
-        // $gltf.nodes['Beta_Joints'].visible = false
+      if(Object.keys(initialDirections).length == 0){
+        Object.keys($gltf.nodes).map(n=>{
+          if($gltf.nodes[n].type == 'Bone'){
+            if($gltf.nodes[n].children.length>0){
+              // Assuming the first child gives the correct direction
+              const childBone = $gltf.nodes[n].children[0];
+
+              // Calculate the direction vector from the bone to its child
+              const direction = new Vector3().subVectors(childBone.position, $gltf.nodes[n].position).clone().normalize();
+
+              // Store this initial direction with the bone name as the key
+              initialDirections[n] = direction;
+            }else{
+              // console.log('-- no --children')
+            }
+          }
+        })    
+      }
     }
+
+    const origin = new Vector3( 7, 3, 3 );
+    const hex = 0xffff00;
+
     // $: console.log(keypoints)
   </script>
   
@@ -114,7 +145,8 @@
     <OrbitControls />
   </T.PerspectiveCamera>
   
-  <T.DirectionalLight position={[3, 10, 7]} />
+  <T.DirectionalLight position={[4, 10, 7]} intensity={0.3} />
+  <T.AmbientLight intensity={0.6} />
   
 {#if $gltf}
   <T is={$gltf.nodes['Scene']} scale={9} position={[0,-9,0]} bind:skeleton={skeleton} />

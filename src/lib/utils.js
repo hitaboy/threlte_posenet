@@ -16,6 +16,7 @@
  */
 import * as posenet from "@tensorflow-models/posenet";
 import * as tf from "@tensorflow/tfjs";
+import { Quaternion, Vector3 } from 'three';
 
 const color = "aqua";
 const boundingBoxColor = "red";
@@ -243,3 +244,12 @@ function drawPoints(ctx, points, radius, color) {
 //         [heatmapY, heatmapX], [offsetPointY, offsetPointX], color, scale, ctx);
 //   }
 // }
+
+
+/**
+ * Calculate the midpoint between two vectors
+ */
+
+export function getMidpoint(p1, p2) {
+  return {x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2, z: (p1.z + p2.z) / 2};
+}
