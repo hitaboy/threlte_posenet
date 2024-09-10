@@ -4,10 +4,11 @@
     import { useGltf, OrbitControls } from '@threlte/extras'
     import { Quaternion, Vector3 } from 'three';
     export let poses = []
-    const gltf = useGltf('/ReadyPlayerMe_66cc6c875071a1bbc6199b10.glb')
+    const gltf = useGltf('/model2.glb')
 
     let skeleton
     let consoled = false
+    let prefix = 'mixamorig';
 
     function updateBoneRotation(boneName, s_x, s_y, s_z, e_x, e_y, e_z){
       const start = new Vector3(s_x * 2 - 1, -(s_y * 2 - 1), s_z);
@@ -15,21 +16,11 @@
       const direction = new Vector3().subVectors(end, start).normalize();
       const defaultDirection = new Vector3(0, 1, 0);
       const quaternion = new Quaternion().setFromUnitVectors(defaultDirection, direction);
-      if(boneName == ''){
-        return quaternion
-      }else{
-        $gltf.nodes[boneName].quaternion.copy(quaternion)
-      }
+      $gltf.nodes[prefix+boneName].quaternion.copy(quaternion)
     }
 
     function midpoint(p1,p2) {
       return new Vector3((p1.x + p2.x) / 2,(p1.y + p2.y) / 2,(p1.z + p2.z) / 2)
-    }
-
-    function position(boneName, pos, mul) {
-      $gltf.nodes[boneName].position.x = pos.x*mul
-      $gltf.nodes[boneName].position.y = pos.y*mul
-      $gltf.nodes[boneName].position.z = pos.z*mul
     }
 
     let neck
@@ -91,9 +82,9 @@
             updateBoneRotation('Neck', neck.x, neck.y, neck.z*-1, poses[0].x, poses[0].y, poses[0].z*-1);
           }
           if(checkScoreTreshold([5,2])){
-            $gltf.nodes['Head'].rotation.y = 2*Math.PI+Math.PI*(eyes.x*2)
+            $gltf.nodes[prefix+'Head'].rotation.y = 2*Math.PI+Math.PI*(eyes.x*2)
             if(checkScoreTreshold([11,12])){
-              $gltf.nodes['Head'].rotation.x = Math.PI-Math.PI/(eyes_neck.y*2)-0.5
+              $gltf.nodes[prefix+'Head'].rotation.x = Math.PI-Math.PI/(eyes_neck.y*2)-0.5
             }
           }
           
